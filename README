@@ -1,0 +1,13 @@
+To test your dev changes do the following:
+
+docker stop hm
+
+docker rm hm
+
+./hm-run.sh
+
+It will build a docker image and create a new container.
+
+You can view the webpage at https://brownadphi.org/hm.
+
+NOTE: The paths in the Express app should not include the '/hm'. I am removing that in the server config.

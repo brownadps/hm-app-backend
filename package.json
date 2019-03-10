@@ -1,0 +1,23 @@
+{
+  "name": "housemanager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@uandi/javascript-lp-solver": "^0.4.5",
+    "adps-auth": "git+https://github.com/brownadps/auth.git",
+    "express": "^4.16.4",
+    "googleapis": "^37.2.0",
+    "moment": "^2.24.0",
+    "moment-timezone": "^0.5.23",
+    "mysql": "^2.16.0",
+    "path": "^0.12.7",
+    "yasmij": "^0.2.6"
+  }
+}
