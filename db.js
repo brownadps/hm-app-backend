@@ -262,17 +262,41 @@ const otherActions = {
                 //console.error(error);
         });
     },
-    // for reminder email
-    getTodayShiftsInfo: function(conn) {
-        var dateString = moment().tz('America/New_York').format("YYYY-MM-DD");
-        conn.query("SELECT cleaningshifts.room, cleaningshifts.size, cleaningshifts.cc_id," + 
-            " c.id, c.pair_id, p.user_id1, p.user_id2, p.user_id3 FROM " + 
-            "cleaningshifts INNER JOIN ccshifts AS c ON cleaningshifts.cc_id = " + 
-            "c.id INNER JOIN pairs AS p on c.pair_id = p.id WHERE day = ?", [dateString], 
-            function(error, result, fields) {
-                console.log(result);
-                console.error(error);
-        });
+    //this query gets all the info necessary for a reminder email
+    //it's a bit complicated...
+    getShiftsByDate: async function(db, date) {
+        let results;
+        try {
+            results = await db.query("SELECT cleaningshifts.room, cleaningshifts.size, " +
+                "GROUP_CONCAT(DISTINCT u.email SEPARATOR ', ') as emails, " + 
+                "GROUP_CONCAT(DISTINCT u2.first_name SEPARATOR ', ') as cc_names, " +
+                "GROUP_CONCAT(DISTINCT u2.email SEPARATOR ', ') as cc_emails " +
+                "FROM cleaningshifts " + 
+                "INNER JOIN pairs as p on cleaningshifts.pair_id = p.id " +
+                "RIGHT JOIN users as u ON p.user_id1 = u.id OR p.user_id2 = u.id OR p.user_id3 = u.id " +
+                "LEFT JOIN ccshifts AS cc ON ISNULL(cc.id) OR cleaningshifts.cc_id = cc.id " +
+                "LEFT JOIN pairs AS p2 on cc.id IS NOT NULL AND cc.pair_id = p2.id " +
+                "LEFT JOIN users as u2 ON cc.id IS NOT NULL AND (p2.user_id1 = u2.id OR p2.user_id2 = u2.id OR p2.user_id3 = u2.id) " +
+                "WHERE day = ? GROUP BY cleaningshifts.id, cc.id, p.id, p2.id", [date]);
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
+                data: {
+                    message: 'Oops! There was an error.'
+                }
+            }));
+        }
+        if (!results || results.length < 1) {
+            console.error(`no shifts on this date: ${date}`);
+            throw new Error(JSON.stringify({
+                status: 404,
+                data: {
+                    message: "No shifts on this date or date is invalid."
+                }
+            }));
+        }
+        return results[0];
     },
     
     addCleaningShift: function(conn, cleaningShiftInfo) {

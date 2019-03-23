@@ -55,7 +55,7 @@ function UserAPI(router, options) {
         try {
             const token = await oauth2Client.getAccessTokenAsync();
             const tokeninfo = await oauth2Client.getTokenInfo(token.token);
-            const guid = tokeninfo.sub;
+            let guid = tokeninfo.sub;
             const userId = await actions.guidToUserId(db, guid);
             if (!isHM) {
                 throw new Error(JSON.stringify({
@@ -70,8 +70,8 @@ function UserAPI(router, options) {
             const last_name = req.params.last_name || user.last_name;
             const email = req.params.email || user.email;
             const is_hm = req.params.is_hm || user.is_hm;
-            const guid = user.guid; // This should not be updated.
-            const email = req.body.email;
+            guid = user.guid; // This should not be updated.
+            //const email = req.body.email;
             res.send(data);
         } catch (err) {
             err = JSON.parse(err.message);
@@ -115,7 +115,7 @@ function GroupAPI(router, options) {
             const data = await actions.getGroupById(db, groupId);
             return res.send(data);
         } catch (err) {
-            err = JSON.parse(err);
+            err = JSON.parse(err.message);
             return res.status(err.status).send(err);
         }
     });
@@ -185,6 +185,26 @@ function PairAPI(router, options) {
     });
 }
 
+function CleaningShiftAPI(router, options) {
+    const db = options.db;
+
+    router.get('/shift/:date', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+   
+        try {
+            const date = req.params.date;
+            const data = await actions.getShiftsByDate(db, date);
+            return res.send(data);
+        } catch (err) {
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
+}
+
 function API(router, options) {
     const db = options.db;
 
@@ -212,7 +232,8 @@ function API(router, options) {
 
     UserAPI(router, options);
     GroupAPI(router, options);
-    PairAPI(router, options);    
+    PairAPI(router, options); 
+    CleaningShiftAPI(router, options);   
 }
 
 module.exports = {
