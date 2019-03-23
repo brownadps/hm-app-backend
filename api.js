@@ -55,7 +55,7 @@ function UserAPI(router, options) {
         try {
             const token = await oauth2Client.getAccessTokenAsync();
             const tokeninfo = await oauth2Client.getTokenInfo(token.token);
-            const guid = tokeninfo.sub;
+            let guid = tokeninfo.sub;
             const userId = await actions.guidToUserId(db, guid);
             if (!isHM) {
                 throw new Error(JSON.stringify({
@@ -70,8 +70,8 @@ function UserAPI(router, options) {
             const last_name = req.params.last_name || user.last_name;
             const email = req.params.email || user.email;
             const is_hm = req.params.is_hm || user.is_hm;
-            const guid = user.guid; // This should not be updated.
-            const email = req.body.email;
+            guid = user.guid; // This should not be updated.
+            //const email = req.body.email;
             res.send(data);
         } catch (err) {
             err = JSON.parse(err.message);
