@@ -244,22 +244,6 @@ function CleaningShiftAPI(router, options) {
    
         try {
             const date = req.params.date;
-            const data = await actions.getShiftsByDate(db, date);
-            return res.send(data);
-        } catch (err) {
-            err = JSON.parse(err.message);
-            return res.status(err.status).send(err);
-        }
-    });
-
-    router.get('/shift/:date/after', async (req, res) => {
-        const oauth2Client = Auth.authenticate(req);
-        if (oauth2Client === null) {
-            return res.status(302).set('Location', '/').send();
-        }
-   
-        try {
-            const date = req.params.date;
             const data = await actions.getShiftsAfterDate(db, date);
             return res.send(data);
         } catch (err) {
@@ -278,6 +262,26 @@ function CleaningShiftAPI(router, options) {
             const date = req.params.date;
             const groupId = req.params.groupId;
             const data = await actions.getShiftsAfterDateByGroup(db, date, groupId);
+            return res.send(data);
+        } catch (err) {
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
+}
+
+function EmailAPI(router, options) {
+    const db = options.db;
+
+    router.get('/email/:date', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+   
+        try {
+            const date = req.params.date;
+            const data = await actions.getShiftsByDate(db, date);
             return res.send(data);
         } catch (err) {
             err = JSON.parse(err.message);
@@ -315,6 +319,7 @@ function API(router, options) {
     GroupAPI(router, options);
     PairAPI(router, options); 
     CleaningShiftAPI(router, options);   
+    EmailAPI(router, options);   
 }
 
 module.exports = {
