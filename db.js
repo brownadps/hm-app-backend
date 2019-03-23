@@ -351,11 +351,17 @@ const otherActions = {
             const results = await db.query("INSERT INTO cleaningshifts (room, size, points, pair_id, day, status) " +
             "VALUES (?, ?, ?, ?, ?, 'ASSIGNED')", [shiftInfo.room, shiftInfo.size, 
             shiftInfo.points, shiftInfo.pair_id, shiftInfo.day]);
+            const update_results = await db.query("UPDATE cleaningshifts " +
+                "RIGHT JOIN ccshifts ON ccshifts.room = cleaningshifts.room AND ccshifts.start_day <= cleaningshifts.day AND ccshifts.end_day >= cleaningshifts.day " +
+                "SET cleaningshifts.cc_id = ccshifts.id " +
+                "WHERE ccshifts.room = ? AND ccshifts.start_day <= ? AND ccshifts.end_day >= ?",
+                [shiftInfo.room, shiftInfo.day, shiftInfo.day]);
             return {
                 status: 200,
                 data: {
                     message: 'Success.',
-                    id: results.insertId
+                    results_id: results.insertId,
+                    update_results_id: update_results.insertId
                 }
             };
         } catch (err) {
@@ -392,7 +398,7 @@ const otherActions = {
                 data: {
                     message: 'Success.',
                     results_id: results.insertId,
-                    update_results_id: results.insertId
+                    update_results_id: update_results.insertId
                 }
             };
         } catch (err) {
