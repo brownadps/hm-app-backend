@@ -434,12 +434,20 @@ const emailActions = {
     getCCEmailDataByRoom: async function(db, room, startDay) {
         let email_results;
         try {
-            console.log(room);
-            console.log(startDay);
             const id_results = await db.query("SELECT ccshifts.id FROM ccshifts " +
                 "WHERE room = ? AND start_day = ?",
                 [room, startDay]);
-            console.log(id_results[0].id); //error check id results!
+
+            if (!id_results || id_results.length < 1) {
+                console.error(`no id for this cc shift: ${room} ${startDay}`);
+                throw new Error(JSON.stringify({
+                    status: 404,
+                    data: {
+                        message: "No id for cleaning coordinators for this room or start day."
+                    }
+                }));
+            }
+
             email_results = await db.query("SELECT cleaningshifts.room, cleaningshifts.size, cleaningshifts.day, " +
                 "GROUP_CONCAT(DISTINCT u.first_name SEPARATOR ', ') as group_names, " +
                 "GROUP_CONCAT(DISTINCT u2.email SEPARATOR ', ') as cc_emails " +
@@ -450,8 +458,8 @@ const emailActions = {
                 "LEFT JOIN shiftgroups AS g2 on cc.group_id = g2.id " +
                 "LEFT JOIN users as u2 ON cc.id IS NOT NULL AND (g2.user_id1 = u2.id OR g2.user_id2 = u2.id OR g2.user_id3 = u2.id) " +
                 "WHERE cc_id = ? GROUP BY cleaningshifts.id, cc.id, g.id, g2.id", [id_results[0].id]);
-            console.log(email_results);
         } catch (err) {
+            console.log("hi");
             console.error(err);
             throw new Error(JSON.stringify({
                 status: 500,

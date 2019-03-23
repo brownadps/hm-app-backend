@@ -342,7 +342,7 @@ function EmailAPI(router, options) {
             const data = await actions.getCCEmailDataByRoom(db, room, startDay);
             return res.send(data);
         } catch (err) {
-            console.log(err);
+            //console.log(err);
             err = JSON.parse(err.message);
             return res.status(err.status).send(err);
         }
