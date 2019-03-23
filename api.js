@@ -329,6 +329,24 @@ function EmailAPI(router, options) {
             return res.status(err.status).send(err);
         }
     });
+
+    router.get('/email/cc/:room/:startDay', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+   
+        try {
+            const room = req.params.room;
+            const startDay = req.params.startDay;
+            const data = await actions.getCCEmailDataByRoom(db, room, startDay);
+            return res.send(data);
+        } catch (err) {
+            console.log(err);
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
 }
 
 function API(router, options) {
