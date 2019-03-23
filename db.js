@@ -164,6 +164,27 @@ const userActions = {
 }
 
 const groupActions = {
+    createGroup: async function(db, userIds) {
+        try {
+            let user_id1, user_id2, user_id3;
+            [user_id1, user_id2, user_id3] = userIds;
+            await db.query('INSERT INTO shiftgroups (user_id1, user_id2, user_id3) VALUES (?, ?, ?)', [user_id1, user_id2, user_id3]);
+            return {
+                status: 200,
+                data: {
+                    message: 'Success.'
+                }
+            };
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
+                data: {
+                    message: 'Oops! There was an error.'
+                }
+            }));
+        }
+    },
     getGroupIds: async function(db) {
         let results;
         try {
@@ -238,58 +259,7 @@ const groupActions = {
     }
 }
 
-const otherActions = {
-    getGroupMembers: function(conn, groupId) {
-        conn.query("SELECT shiftgroups.id, shiftgroups.user_id1, shiftgroups.user_id2, shiftgroups.user_id3, users.first_name, users.last_name FROM shiftgroups, users WHERE shiftgroups.id = ? AND (users.id = shiftgroups.user_id1 OR users.id = shiftgroups.user_id2 OR users.id = shiftgroups.user_id3)", [groupId], 
-            function(error, result, fields) {
-                console.log(result);
-        });
-    },
-    getCCShifts: function(conn, ccId) {
-        conn.query("SELECT cleaningshifts.room, cleaningshifts.size, cleaningshifts.day, " + 
-            "cleaningshifts.group_id, g.user_id1, g.user_id2, g.user_id3 FROM cleaningshifts " + 
-            "INNER JOIN shiftgroups AS g ON cleaningshifts.group_id = g.id WHERE cleaningshifts.cc_id = ?", 
-            [ccId], function(error, result, fields) {
-                console.log(result);
-                //console.error(error);
-        });
-    },
-    //this query gets all the info necessary for a reminder email
-    //it's a bit complicated...
-    getShiftsByDate: async function(db, date) {
-        let results;
-        try {
-            results = await db.query("SELECT cleaningshifts.room, cleaningshifts.size, " +
-                "GROUP_CONCAT(DISTINCT u.email SEPARATOR ', ') as emails, " + 
-                "GROUP_CONCAT(DISTINCT u2.first_name SEPARATOR ', ') as cc_names, " +
-                "GROUP_CONCAT(DISTINCT u2.email SEPARATOR ', ') as cc_emails " +
-                "FROM cleaningshifts " + 
-                "INNER JOIN shiftgroups as g on cleaningshifts.group_id = g.id " +
-                "RIGHT JOIN users as u ON g.user_id1 = u.id OR g.user_id2 = u.id OR g.user_id3 = u.id " +
-                "LEFT JOIN ccshifts AS cc ON ISNULL(cc.id) OR cleaningshifts.cc_id = cc.id " +
-                "LEFT JOIN shiftgroups AS g2 on cc.id IS NOT NULL AND cc.group_id = g2.id " +
-                "LEFT JOIN users as u2 ON cc.id IS NOT NULL AND (g2.user_id1 = u2.id OR g2.user_id2 = u2.id OR g2.user_id3 = u2.id) " +
-                "WHERE day = ? GROUP BY cleaningshifts.id, cc.id, g.id, g2.id", [date]);
-        } catch (err) {
-            console.error(err);
-            throw new Error(JSON.stringify({
-                status: 500,
-                data: {
-                    message: 'Oops! There was an error.'
-                }
-            }));
-        }
-        if (!results || results.length < 1) {
-            console.error(`no shifts on this date: ${date}`);
-            throw new Error(JSON.stringify({
-                status: 404,
-                data: {
-                    message: "No shifts on this date or date is invalid."
-                }
-            }));
-        }
-        return results;
-    },
+const shiftActions = {
     getShiftsAfterDate: async function(db, date, groupId) {
         let results;
         try {
@@ -410,6 +380,63 @@ const otherActions = {
                 }
             }));
         }
+    }
+}
+
+const emailActions = {
+    //this query gets all the info necessary for a reminder email
+    //it's a bit complicated...
+    getEmailDataByDate: async function(db, date) {
+        let results;
+        try {
+            results = await db.query("SELECT cleaningshifts.room, cleaningshifts.size, " +
+                "GROUP_CONCAT(DISTINCT u.email SEPARATOR ', ') as emails, " + 
+                "GROUP_CONCAT(DISTINCT u2.first_name SEPARATOR ', ') as cc_names, " +
+                "GROUP_CONCAT(DISTINCT u2.email SEPARATOR ', ') as cc_emails " +
+                "FROM cleaningshifts " + 
+                "INNER JOIN shiftgroups as g on cleaningshifts.group_id = g.id " +
+                "RIGHT JOIN users as u ON g.user_id1 = u.id OR g.user_id2 = u.id OR g.user_id3 = u.id " +
+                "LEFT JOIN ccshifts AS cc ON ISNULL(cc.id) OR cleaningshifts.cc_id = cc.id " +
+                "LEFT JOIN shiftgroups AS g2 on cc.id IS NOT NULL AND cc.group_id = g2.id " +
+                "LEFT JOIN users as u2 ON cc.id IS NOT NULL AND (g2.user_id1 = u2.id OR g2.user_id2 = u2.id OR g2.user_id3 = u2.id) " +
+                "WHERE day = ? GROUP BY cleaningshifts.id, cc.id, g.id, g2.id", [date]);
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
+                data: {
+                    message: 'Oops! There was an error.'
+                }
+            }));
+        }
+        if (!results || results.length < 1) {
+            console.error(`no shifts on this date: ${date}`);
+            throw new Error(JSON.stringify({
+                status: 404,
+                data: {
+                    message: "No shifts on this date or date is invalid."
+                }
+            }));
+        }
+        return results;
+    }
+}
+
+const otherActions = {
+    getGroupMembers: function(conn, groupId) {
+        conn.query("SELECT shiftgroups.id, shiftgroups.user_id1, shiftgroups.user_id2, shiftgroups.user_id3, users.first_name, users.last_name FROM shiftgroups, users WHERE shiftgroups.id = ? AND (users.id = shiftgroups.user_id1 OR users.id = shiftgroups.user_id2 OR users.id = shiftgroups.user_id3)", [groupId], 
+            function(error, result, fields) {
+                console.log(result);
+        });
+    },
+    getCCShifts: function(conn, ccId) {
+        conn.query("SELECT cleaningshifts.room, cleaningshifts.size, cleaningshifts.day, " + 
+            "cleaningshifts.group_id, g.user_id1, g.user_id2, g.user_id3 FROM cleaningshifts " + 
+            "INNER JOIN shiftgroups AS g ON cleaningshifts.group_id = g.id WHERE cleaningshifts.cc_id = ?", 
+            [ccId], function(error, result, fields) {
+                console.log(result);
+                //console.error(error);
+        });
     },
     
     // createUserByEmail: function(conn, email) {
@@ -432,33 +459,14 @@ const otherActions = {
     //         };
     //     });
     // },
-    createPair: async function(db, userIds) {
-        try {
-            let user_id1, user_id2, user_id3;
-            [user_id1, user_id2, user_id3] = userIds;
-            await db.query('INSERT INTO shiftgroups (user_id1, user_id2, user_id3) VALUES (?, ?, ?)', [user_id1, user_id2, user_id3]);
-            return {
-                status: 200,
-                data: {
-                    message: 'Success.'
-                }
-            };
-        } catch (err) {
-            console.error(err);
-            throw new Error(JSON.stringify({
-                status: 500,
-                data: {
-                    message: 'Oops! There was an error.'
-                }
-            }));
-        }
-    },
     updateCleaningShiftStatus: function(conn, status) {}
 }
 
 const actions = {
     ...userActions,
     ...groupActions,
+    ...shiftActions,
+    ...emailActions,
     ...otherActions
 }
 

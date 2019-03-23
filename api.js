@@ -176,7 +176,7 @@ function PairAPI(router, options) {
                     }
                 }));
             }
-            const data = await actions.createPair(db, userIds);
+            const data = await actions.createGroup(db, userIds);
             res.send(data);
         } catch (err) {
             err = JSON.parse(err.message);
@@ -281,7 +281,7 @@ function EmailAPI(router, options) {
    
         try {
             const date = req.params.date;
-            const data = await actions.getShiftsByDate(db, date);
+            const data = await actions.getEmailDataByDate(db, date);
             return res.send(data);
         } catch (err) {
             err = JSON.parse(err.message);
