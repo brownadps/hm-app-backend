@@ -291,10 +291,11 @@ const shiftActions = {
     getShiftsAfterDateByGroup: async function(db, date, groupId) {
         let results;
         try {
-            results = await db.query("SELECT room, size, day, " +
-                "null as start_day, null as end_day FROM cleaningshifts " +
+            results = await db.query("SELECT id as shift_id, null as cc_shift_id, room, size, " +
+                "day, null as start_day, null as end_day, 1 as is_cleaning_shift FROM cleaningshifts " +
                 "WHERE group_id = ? AND day >= ? " +
-                "UNION SELECT room, null as size, null as day, start_day, end_day " +
+                "UNION SELECT null as shift_id, id as cc_shift_id, room, null as size, null as day, " +
+                "start_day, end_day, 0 as is_cleaning_shift " +
                 "FROM ccshifts WHERE group_id = ? AND start_day >= ?", [groupId, date, groupId, date]);
         } catch (err) {
             console.error(err);
@@ -344,17 +345,6 @@ const shiftActions = {
             }));
         }
     },
-    addCCShift: function(conn, ccShiftInfo) {
-        conn.query("INSERT INTO ccshifts (room, group_id, start_day, end_day, missed, made_up) " +
-            "VALUES (?, ?, ?, ?, 0, 0)", [ccShiftInfo.room, ccShiftInfo.group_id, 
-            ccShiftInfo.start_day, ccShiftInfo.end_day], function(error, result, fields) {
-                conn.query("UPDATE cleaningshifts SET cc_id = ? WHERE room = ? AND day >= ? AND " +
-                    "day <= ?", [ccShiftInfo.cc_id, ccShiftInfo.room, ccShiftInfo.start_day, 
-                    ccShiftInfo.end_day], function(error, result, fields) {
-    
-                });
-        });
-    },
     createCCShift: async function(db, ccShiftInfo) {
         try {
             const results = await db.query("INSERT INTO ccshifts (room, group_id, start_day, end_day, missed, made_up) " +
@@ -369,6 +359,27 @@ const shiftActions = {
                     message: 'Success.',
                     results_id: results.insertId,
                     update_results_id: update_results.insertId
+                }
+            };
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
+                data: {
+                    message: 'Oops! There was an error.'
+                }
+            }));
+        }
+    },
+    updateShiftStatus: async function(db, shiftId, status) {
+        try {
+            const results = await db.query("UPDATE cleaningshifts " +
+                "SET status = ? WHERE id = ?", [status, shiftId]);
+            return {
+                status: 200,
+                data: {
+                    message: 'Success.',
+                    id: results.insertId,
                 }
             };
         } catch (err) {
@@ -436,6 +447,18 @@ const otherActions = {
             [ccId], function(error, result, fields) {
                 console.log(result);
                 //console.error(error);
+        });
+    },
+
+    addCCShift: function(conn, ccShiftInfo) {
+        conn.query("INSERT INTO ccshifts (room, group_id, start_day, end_day, missed, made_up) " +
+            "VALUES (?, ?, ?, ?, 0, 0)", [ccShiftInfo.room, ccShiftInfo.group_id, 
+            ccShiftInfo.start_day, ccShiftInfo.end_day], function(error, result, fields) {
+                conn.query("UPDATE cleaningshifts SET cc_id = ? WHERE room = ? AND day >= ? AND " +
+                    "day <= ?", [ccShiftInfo.cc_id, ccShiftInfo.room, ccShiftInfo.start_day, 
+                    ccShiftInfo.end_day], function(error, result, fields) {
+    
+                });
         });
     },
     

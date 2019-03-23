@@ -268,6 +268,31 @@ function CleaningShiftAPI(router, options) {
             return res.status(err.status).send(err);
         }
     });
+
+    router.post('/shift/status', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+
+        try {
+            const shiftId = req.body.shiftId;
+            const status = req.body.status;
+            if (!shiftId || !status) {
+                throw new Error(JSON.stringify({
+                    status: 403,
+                    data: {
+                        message: "Must supply shift id and new status."
+                    }
+                }));
+            }
+            const data = await actions.updateShiftStatus(db, shiftId, status);
+            res.send(data);
+        } catch (err) {
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
 }
 
 function EmailAPI(router, options) {
@@ -281,7 +306,7 @@ function EmailAPI(router, options) {
    
         try {
             const date = req.params.date;
-            const data = await actions.getEmailDataByDate(db, date);
+            const data = await actions.getEmailDatebyDate(db, date);
             return res.send(data);
         } catch (err) {
             err = JSON.parse(err.message);
