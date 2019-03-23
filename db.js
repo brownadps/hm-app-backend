@@ -295,9 +295,9 @@ const otherActions = {
         try {
             results = await db.query("SELECT room, size, day, " +
                 "null as start_day, null as end_day FROM cleaningshifts " +
-                "WHERE day > ? " +
+                "WHERE day >= ? " +
                 "UNION SELECT room, null as size, null as day, start_day, end_day " +
-                "FROM ccshifts WHERE start_day > ?", [date, date]);
+                "FROM ccshifts WHERE start_day >= ?", [date, date]);
         } catch (err) {
             console.error(err);
             throw new Error(JSON.stringify({
@@ -323,9 +323,9 @@ const otherActions = {
         try {
             results = await db.query("SELECT room, size, day, " +
                 "null as start_day, null as end_day FROM cleaningshifts " +
-                "WHERE pair_id = ? AND day > ? " +
+                "WHERE pair_id = ? AND day >= ? " +
                 "UNION SELECT room, null as size, null as day, start_day, end_day " +
-                "FROM ccshifts WHERE pair_id = ? AND start_day > ?", [groupId, date, groupId, date]);
+                "FROM ccshifts WHERE pair_id = ? AND start_day >= ?", [groupId, date, groupId, date]);
         } catch (err) {
             console.error(err);
             throw new Error(JSON.stringify({
