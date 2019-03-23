@@ -1,4 +1,4 @@
-#!/bin/bash -i
+#!/bin/bash
 docker build -t hm-${USER} . && \
 docker run --name hm-${USER} \
 --network=proxy \
