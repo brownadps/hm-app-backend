@@ -245,14 +245,6 @@ const otherActions = {
                 console.log(result);
         });
     },
-    getUpcomingShifts: function(conn, groupId) {
-        var dateString = moment().tz('America/New_York').format("YYYY-MM-DD");
-        conn.query("SELECT room, size, day, null as start_day, null as end_day FROM cleaningshifts WHERE pair_id = ? AND day > ? UNION SELECT room, null as size, null as day, start_day, end_day FROM ccshifts WHERE pair_id = ? AND start_day > ?", 
-            [groupId, dateString, groupId, dateString], function(error, result, fields) {
-                console.log(result);
-                console.error(error);
-        });
-    },
     getCCShifts: function(conn, ccId) {
         conn.query("SELECT cleaningshifts.room, cleaningshifts.size, cleaningshifts.day, " + 
             "cleaningshifts.pair_id, p.user_id1, p.user_id2, p.user_id3 FROM cleaningshifts " + 
@@ -296,16 +288,85 @@ const otherActions = {
                 }
             }));
         }
-        return results[0];
+        return results;
     },
-    
-    addCleaningShift: function(conn, cleaningShiftInfo) {
-        conn.query("INSERT INTO cleaningshifts (room, size, points, pair_id, day, status) " +
-            "VALUES (?, ?, ?, ?, ?, 'ASSIGNED')", [cleaningShiftInfo.room, cleaningShiftInfo.size, 
-            cleaningShiftInfo.points, cleaningShiftInfo.pair_id, cleaningShiftInfo.day], 
-            function(error, result, fields) {
-    
-        });
+    getShiftsAfterDate: async function(db, date, groupId) {
+        let results;
+        try {
+            results = await db.query("SELECT room, size, day, " +
+                "null as start_day, null as end_day FROM cleaningshifts " +
+                "WHERE day > ? " +
+                "UNION SELECT room, null as size, null as day, start_day, end_day " +
+                "FROM ccshifts WHERE start_day > ?", [date, date]);
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
+                data: {
+                    message: 'Oops! There was an error.'
+                }
+            }));
+        }
+        if (!results || results.length < 1) {
+            console.error(`no shifts after this date: ${date}`);
+            throw new Error(JSON.stringify({
+                status: 404,
+                data: {
+                    message: "No shifts after this date or date is invalid."
+                }
+            }));
+        }
+        return results;
+    },
+    getShiftsAfterDateByGroup: async function(db, date, groupId) {
+        let results;
+        try {
+            results = await db.query("SELECT room, size, day, " +
+                "null as start_day, null as end_day FROM cleaningshifts " +
+                "WHERE pair_id = ? AND day > ? " +
+                "UNION SELECT room, null as size, null as day, start_day, end_day " +
+                "FROM ccshifts WHERE pair_id = ? AND start_day > ?", [groupId, date, groupId, date]);
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
+                data: {
+                    message: 'Oops! There was an error.'
+                }
+            }));
+        }
+        if (!results || results.length < 1) {
+            console.error(`no shifts after this date: ${date} for this group: ${groupId}`);
+            throw new Error(JSON.stringify({
+                status: 404,
+                data: {
+                    message: "No shifts after this date for this group or date is invalid."
+                }
+            }));
+        }
+        return results;
+    },
+    createShift: async function(db, shiftInfo) {
+        try {
+            const results = await db.query("INSERT INTO cleaningshifts (room, size, points, pair_id, day, status) " +
+            "VALUES (?, ?, ?, ?, ?, 'ASSIGNED')", [shiftInfo.room, shiftInfo.size, 
+            shiftInfo.points, shiftInfo.pair_id, shiftInfo.day]);
+            return {
+                status: 200,
+                data: {
+                    message: 'Success.',
+                    id: results.insertId
+                }
+            };
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
+                data: {
+                    message: 'Oops! There was an error.'
+                }
+            }));
+        }
     },
     addCCShift: function(conn, ccShiftInfo) {
         conn.query("INSERT INTO ccshifts (room, pair_id, start_day, end_day, missed, made_up) " +
@@ -317,6 +378,32 @@ const otherActions = {
     
                 });
         });
+    },
+    createCCShift: async function(db, ccShiftInfo) {
+        try {
+            const results = await db.query("INSERT INTO ccshifts (room, pair_id, start_day, end_day, missed, made_up) " +
+                "VALUES (?, ?, ?, ?, 0, 0)", [ccShiftInfo.room, ccShiftInfo.pair_id, 
+                ccShiftInfo.start_day, ccShiftInfo.end_day]);
+            const update_results = await db.query("UPDATE cleaningshifts SET cc_id = ? WHERE room = ? AND day >= ? AND " +
+                    "day <= ?", [results.id, ccShiftInfo.room, ccShiftInfo.start_day, 
+                    ccShiftInfo.end_day]);
+            return {
+                status: 200,
+                data: {
+                    message: 'Success.',
+                    results_id: results.insertId,
+                    update_results_id: results.insertId
+                }
+            };
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
+                data: {
+                    message: 'Oops! There was an error.'
+                }
+            }));
+        }
     },
     
     // createUserByEmail: function(conn, email) {

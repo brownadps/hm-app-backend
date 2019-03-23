@@ -188,6 +188,54 @@ function PairAPI(router, options) {
 function CleaningShiftAPI(router, options) {
     const db = options.db;
 
+    router.post('/shift', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+
+        try {
+            const shiftInfo = req.body;
+            if (!shiftInfo) {
+                throw new Error(JSON.stringify({
+                    status: 403,
+                    data: {
+                        message: "Must supply info for shift."
+                    }
+                }));
+            }
+            const data = await actions.createShift(db, shiftInfo);
+            res.send(data);
+        } catch (err) {
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
+
+    router.post('/ccshift', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+
+        try {
+            const ccShiftInfo = req.body;
+            if (!ccShiftInfo) {
+                throw new Error(JSON.stringify({
+                    status: 403,
+                    data: {
+                        message: "Must supply info for shift."
+                    }
+                }));
+            }
+            const data = await actions.createCCShift(db, ccShiftInfo);
+            res.send(data);
+        } catch (err) {
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
+
     router.get('/shift/:date', async (req, res) => {
         const oauth2Client = Auth.authenticate(req);
         if (oauth2Client === null) {
@@ -197,6 +245,39 @@ function CleaningShiftAPI(router, options) {
         try {
             const date = req.params.date;
             const data = await actions.getShiftsByDate(db, date);
+            return res.send(data);
+        } catch (err) {
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
+
+    router.get('/shift/:date/after', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+   
+        try {
+            const date = req.params.date;
+            const data = await actions.getShiftsAfterDate(db, date);
+            return res.send(data);
+        } catch (err) {
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
+
+    router.get('/shift/:date/group/:groupId', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+   
+        try {
+            const date = req.params.date;
+            const groupId = req.params.groupId;
+            const data = await actions.getShiftsAfterDateByGroup(db, date, groupId);
             return res.send(data);
         } catch (err) {
             err = JSON.parse(err.message);
