@@ -78,6 +78,22 @@ function UserAPI(router, options) {
             return res.status(err.status).send(err);
         }
     });
+
+    router.get('/user/:userId', async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+   
+        try {
+            const userId = req.params.userId;
+            const data = await actions.getUserById(db, userId);
+            return res.send(data);
+        } catch (err) {
+            err = JSON.parse(err.message);
+            return res.status(err.status).send(err);
+        }
+    });
 }
 
 function GroupAPI(router, options) {
