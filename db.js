@@ -373,14 +373,90 @@ const shiftActions = {
     },
     updateShiftStatus: async function(db, shiftId, status) {
         try {
+            const old_results = await db.query("SELECT status FROM cleaningshifts " +
+                "WHERE id = ?", [shiftId]);
             const results = await db.query("UPDATE cleaningshifts " +
                 "SET status = ? WHERE id = ?", [status, shiftId]);
+
+            let update_results;
+            let my_data;
+            if (old_results[0].status == 'MISSED' && status != 'MISSED') {
+                update_results = await db.query("UPDATE ccshifts " +
+                    "RIGHT JOIN cleaningshifts ON cleaningshifts.cc_id = ccshifts.id " +
+                    "SET missed = missed - 1 WHERE cleaningshifts.id = ?",
+                    [shiftId]);
+
+                my_data = {
+                        message: 'Success.',
+                        old_results_id: old_results.insertId,
+                        results_id: results.insertId,
+                        update_results_id: update_results.insertId
+                }
+            } else if (status == 'MISSED') {
+                update_results = await db.query("UPDATE ccshifts " +
+                    "RIGHT JOIN cleaningshifts ON cleaningshifts.cc_id = ccshifts.id " +
+                    "SET missed = missed + 1 WHERE cleaningshifts.id = ?",
+                    [shiftId]);
+
+                my_data = {
+                        message: 'Success.',
+                        old_results_id: old_results.insertId,
+                        results_id: results.insertId,
+                        update_results_id: update_results.insertId
+                }
+            } else {
+                my_data = {
+                        message: 'Success.',
+                        old_results_id: old_results.insertId,
+                        results_id: results.insertId,
+                }
+            }
+
             return {
                 status: 200,
+                data: my_data
+            };
+             
+        } catch (err) {
+            console.error(err);
+            throw new Error(JSON.stringify({
+                status: 500,
                 data: {
-                    message: 'Success.',
-                    id: results.insertId,
+                    message: 'Oops! There was an error.'
                 }
+            }));
+        }
+    },
+    makeUpShift: async function(db, shiftId, madeUp) {
+        try {
+            const shift_results = await db.query("UPDATE cleaningshifts " +
+                "SET made_up = ? WHERE id = ?", [madeUp, shiftId]);
+
+            let cc_results;
+            let my_data;
+            if (madeUp == 1) {
+                cc_results = await db.query("UPDATE ccshifts " +
+                    "RIGHT JOIN cleaningshifts ON cleaningshifts.cc_id = ccshifts.id " +
+                    "SET ccshifts.made_up = ccshifts.made_up + 1 WHERE cleaningshifts.id = ?",
+                    [shiftId]);
+
+                my_data = {
+                    message: 'Success.',
+                    shift_results_id: shift_results.insertId,
+                    cc_results_id: cc_results.insertId
+                }
+            
+            } else {
+                my_data = {
+                    message: 'Success.',
+                    shift_results_id: shift_results.insertId,
+                }
+            }
+
+
+            return {
+                status: 200,
+                data: my_data
             };
         } catch (err) {
             console.error(err);
