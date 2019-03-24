@@ -311,6 +311,11 @@ function CleaningShiftAPI(router, options) {
     });
 
     router.post('/shift/upload', Upload.array('photos'), async (req, res) => {
+        const oauth2Client = Auth.authenticate(req);
+        if (oauth2Client === null) {
+            return res.status(302).set('Location', '/').send();
+        }
+        
         res.send({
             status: 201,
             filenames: req.files.map(file => file.filename),
