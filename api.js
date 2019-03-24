@@ -5,6 +5,7 @@ const path = require('path');
 
 const { Auth } = require('adps-auth');
 const { actions } = require('./db.js');
+const { Upload } = require('./storage.js');
 
 function UserAPI(router, options) {
     const db = options.db;
@@ -71,7 +72,6 @@ function UserAPI(router, options) {
             const email = req.params.email || user.email;
             const is_hm = req.params.is_hm || user.is_hm;
             guid = user.guid; // This should not be updated.
-            //const email = req.body.email;
             res.send(data);
         } catch (err) {
             err = JSON.parse(err.message);
@@ -310,29 +310,11 @@ function CleaningShiftAPI(router, options) {
         }
     });
 
-    router.post('/shift/makeup', async (req, res) => {
-        const oauth2Client = Auth.authenticate(req);
-        if (oauth2Client === null) {
-            return res.status(302).set('Location', '/').send();
-        }
-
-        try {
-            const shiftId = req.body.shiftId;
-            const madeUp = req.body.madeUp;
-            if (!shiftId) {
-                throw new Error(JSON.stringify({
-                    status: 403,
-                    data: {
-                        message: "Must supply shift id and new status."
-                    }
-                }));
-            }
-            const data = await actions.makeUpShift(db, shiftId, madeUp);
-            res.send(data);
-        } catch (err) {
-            err = JSON.parse(err.message);
-            return res.status(err.status).send(err);
-        }
+    router.post('/shift/upload', Upload.array('photos'), async (req, res) => {
+        res.send({
+            status: 201,
+            filenames: req.files.map(file => file.filename),
+        });
     });
 }
 
@@ -350,24 +332,6 @@ function EmailAPI(router, options) {
             const data = await actions.getEmailDatebyDate(db, date);
             return res.send(data);
         } catch (err) {
-            err = JSON.parse(err.message);
-            return res.status(err.status).send(err);
-        }
-    });
-
-    router.get('/email/cc/:room/:startDay', async (req, res) => {
-        const oauth2Client = Auth.authenticate(req);
-        if (oauth2Client === null) {
-            return res.status(302).set('Location', '/').send();
-        }
-   
-        try {
-            const room = req.params.room;
-            const startDay = req.params.startDay;
-            const data = await actions.getCCEmailDataByRoom(db, room, startDay);
-            return res.send(data);
-        } catch (err) {
-            //console.log(err);
             err = JSON.parse(err.message);
             return res.status(err.status).send(err);
         }
